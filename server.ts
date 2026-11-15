@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { BIBLICAL_STORIES } from './src/data/biblicalStories.js';
 import { RoomState, Player, ClientMessage, ServerMessage, BiblicalStory } from './src/types/game.js';
 import { calculatePuzzlePoints, TOTAL_PIECES } from './src/utils/puzzle.js';
+import { DEFAULT_VERSES, VERSES_COUNT, VERSES_TIME_LIMIT, buildVerseChallenge, formatMs, verseTotalMs } from './src/utils/verses.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -92,7 +93,9 @@ setInterval(() => {
       if (room.timerSeconds <= 0) {
         room.isTimerRunning = false;
         // Auto transition on timeout
-        if (room.stage === 'PUZZLE_STAGE') {
+        if (room.stage === 'VERSES_STAGE') {
+          finishVerses(code, room, '¡Se acabó el tiempo! Veamos la tabla de resultados.');
+        } else if (room.stage === 'PUZZLE_STAGE') {
           // Calculate scores for players who didn't finish
           Object.values(room.players).forEach(p => {
             if (!p.puzzleCompleted) {
@@ -121,6 +124,14 @@ setInterval(() => {
     }
   }
 }, 1000);
+
+// Cierra el juego de versículos y muestra la tabla oficial
+function finishVerses(roomCode: string, room: RoomState, message: string) {
+  room.stage = 'VERSES_RESULTS';
+  room.isTimerRunning = false;
+  broadcastToRoom(roomCode, { type: 'NOTIFICATION', payload: { message, type: 'info' } });
+  broadcastToRoom(roomCode, { type: 'STATE_UPDATE', payload: { room } });
+}
 
 function calculateLeaderboard(room: RoomState) {
   const sorted = Object.values(room.players)
@@ -162,7 +173,11 @@ wss.on('connection', (ws: WebSocket) => {
             puzzlePiecesPlaced: 0,
             puzzleCompleted: false,
             abyssPoints: 0,
-            abyssStrikes: 0
+            abyssStrikes: 0,
+            versesDone: 0,
+            verseTimeMs: 0,
+            verseMistakes: 0,
+            verseFinished: false
           };
 
           const newRoom: RoomState = {
@@ -177,7 +192,8 @@ wss.on('connection', (ws: WebSocket) => {
             players: { [hostId]: hostPlayer },
             abyssGuessedLetters: [],
             abyssStrikes: 0,
-            abyssSolved: false
+            abyssSolved: false,
+            verses: DEFAULT_VERSES.map(buildVerseChallenge)
           };
 
           rooms.set(roomCode, newRoom);
@@ -249,7 +265,11 @@ wss.on('connection', (ws: WebSocket) => {
             puzzlePiecesPlaced: 0,
             puzzleCompleted: false,
             abyssPoints: 0,
-            abyssStrikes: 0
+            abyssStrikes: 0,
+            versesDone: 0,
+            verseTimeMs: 0,
+            verseMistakes: 0,
+            verseFinished: false
           };
 
           room.players[playerId] = newPlayer;
@@ -300,6 +320,105 @@ wss.on('connection', (ws: WebSocket) => {
             payload: { message: '¡El anfitrión cargó una imagen bíblica personalizada!', type: 'success' }
           });
           broadcastToRoom(meta.roomCode, { type: 'STATE_UPDATE', payload: { room } });
+          break;
+        }
+
+        case 'HOST_SET_VERSES': {
+          const meta = socketMeta.get(ws);
+          if (!meta) return;
+          const room = rooms.get(meta.roomCode);
+          if (!room || room.hostId !== meta.playerId || room.stage !== 'LOBBY') return;
+
+          const verses = (msg.payload.verses || [])
+            .slice(0, VERSES_COUNT)
+            .map(v => buildVerseChallenge({
+              reference: String(v.reference || '').slice(0, 60),
+              text: String(v.text || '').slice(0, 500)
+            }));
+
+          if (verses.length !== VERSES_COUNT || verses.some(v => v.phrases.length < 3)) {
+            ws.send(JSON.stringify({
+              type: 'ERROR',
+              payload: { message: `Se necesitan ${VERSES_COUNT} versículos y cada uno debe quedar con al menos 3 frases.` }
+            }));
+            return;
+          }
+
+          room.verses = verses;
+          // Sin el texto: el aviso lo ven todos
+          broadcastToRoom(meta.roomCode, {
+            type: 'NOTIFICATION',
+            payload: { message: 'El anfitrión actualizó los versículos del juego.', type: 'info' }
+          });
+          broadcastToRoom(meta.roomCode, { type: 'STATE_UPDATE', payload: { room } });
+          break;
+        }
+
+        case 'HOST_START_VERSES': {
+          const meta = socketMeta.get(ws);
+          if (!meta) return;
+          const room = rooms.get(meta.roomCode);
+          if (!room || room.hostId !== meta.playerId || room.stage !== 'LOBBY') return;
+
+          Object.values(room.players).forEach(p => {
+            p.versesDone = 0;
+            p.verseTimeMs = 0;
+            p.verseMistakes = 0;
+            p.verseFinished = false;
+          });
+
+          room.stage = 'VERSES_STAGE';
+          room.versesStartedAt = Date.now();
+          room.timerSeconds = VERSES_TIME_LIMIT;
+          room.isTimerRunning = true;
+
+          broadcastToRoom(meta.roomCode, {
+            type: 'NOTIFICATION',
+            payload: { message: '¡Comienza el juego! Ordena los versículos lo más rápido que puedas.', type: 'success' }
+          });
+          broadcastToRoom(meta.roomCode, { type: 'STATE_UPDATE', payload: { room } });
+          break;
+        }
+
+        case 'VERSE_SUBMIT': {
+          const meta = socketMeta.get(ws);
+          if (!meta) return;
+          const room = rooms.get(meta.roomCode);
+          if (!room || room.stage !== 'VERSES_STAGE') return;
+          const player = room.players[meta.playerId];
+          if (!player || player.verseFinished) return;
+
+          // Solo se acepta el versículo que le toca a este jugador
+          const verseIndex = player.versesDone;
+          const verse = room.verses[verseIndex];
+          if (!verse || msg.payload.verseIndex !== verseIndex) return;
+
+          const order = Array.isArray(msg.payload.order) ? msg.payload.order : [];
+          const correct = order.length === verse.phrases.length && verse.phrases.every((phrase, i) => order[i] === phrase);
+
+          if (correct) {
+            player.versesDone += 1;
+            player.verseTimeMs = Date.now() - (room.versesStartedAt ?? Date.now());
+            if (player.versesDone >= room.verses.length) {
+              player.verseFinished = true;
+              broadcastToRoom(meta.roomCode, {
+                type: 'NOTIFICATION',
+                payload: { message: `¡${player.name} ordenó los ${room.verses.length} versículos en ${formatMs(verseTotalMs(player))}!`, type: 'success' }
+              });
+            }
+          } else {
+            player.verseMistakes += 1;
+          }
+
+          ws.send(JSON.stringify({ type: 'VERSE_RESULT', payload: { verseIndex, correct } }));
+
+          // Cuando terminan todos los que siguen conectados, se muestra la tabla
+          const active = Object.values(room.players).filter(p => p.connected);
+          if (active.length > 0 && active.every(p => p.verseFinished)) {
+            finishVerses(meta.roomCode, room, '¡Todos terminaron! Veamos la tabla de resultados.');
+          } else {
+            broadcastToRoom(meta.roomCode, { type: 'STATE_UPDATE', payload: { room } });
+          }
           break;
         }
 
@@ -393,7 +512,10 @@ wss.on('connection', (ws: WebSocket) => {
           const room = rooms.get(meta.roomCode);
           if (!room || room.hostId !== meta.playerId) return;
 
-          if (room.stage === 'PUZZLE_STAGE') {
+          if (room.stage === 'VERSES_STAGE') {
+            finishVerses(meta.roomCode, room, 'El anfitrión cerró el juego. Veamos la tabla de resultados.');
+            break;
+          } else if (room.stage === 'PUZZLE_STAGE') {
             room.stage = 'ABYSS_STAGE';
             room.timerSeconds = 90;
             room.isTimerRunning = true;
@@ -444,6 +566,10 @@ wss.on('connection', (ws: WebSocket) => {
           room.abyssSolved = false;
           Object.values(room.players).forEach(p => {
             p.score = 0;
+            p.versesDone = 0;
+            p.verseTimeMs = 0;
+            p.verseMistakes = 0;
+            p.verseFinished = false;
             p.puzzlePiecesPlaced = 0;
             p.puzzleCompleted = false;
             p.puzzleFinishTime = undefined;

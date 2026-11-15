@@ -10,6 +10,9 @@ import { RoundSummary } from './components/RoundSummary';
 import { FinalPodium } from './components/FinalPodium';
 import { ReactionsOverlay } from './components/ReactionsOverlay';
 import { StorySelectorModal } from './components/StorySelectorModal';
+import { VersesBoard } from './components/VersesBoard';
+import { VersesResults } from './components/VersesResults';
+import { VerseEditorModal } from './components/VerseEditorModal';
 import { AlertTriangle, CheckCircle2, Info, ArrowRight, WifiOff, ImagePlus, Crown } from 'lucide-react';
 
 // Sesión para volver a la misma sala.
@@ -69,6 +72,10 @@ export default function App() {
 
   // Sala anterior guardada en este navegador, para ofrecer "Volver a mi sala"
   const [resumable, setResumable] = useState<SavedSession | null>(null);
+
+  // Juego de versículos: última respuesta del servidor a un intento, y editor del líder
+  const [lastVerseResult, setLastVerseResult] = useState<{ id: string; verseIndex: number; correct: boolean } | null>(null);
+  const [isVerseEditorOpen, setIsVerseEditorOpen] = useState<boolean>(false);
 
   // ¿El servidor exige clave de líder para crear salas? (variable HOST_KEY)
   const [hostKeyRequired, setHostKeyRequired] = useState<boolean>(false);
@@ -137,6 +144,10 @@ export default function App() {
               isHost: msg.payload.room.hostId === msg.payload.playerId
             });
             setResumable(null);
+            break;
+
+          case 'VERSE_RESULT':
+            setLastVerseResult({ id: `${Date.now()}_${Math.random()}`, ...msg.payload });
             break;
 
           case 'REJOIN_FAILED':
@@ -274,6 +285,21 @@ export default function App() {
     });
   };
 
+  const handleStartVerses = () => {
+    if (!room) return;
+    sendMessage({ type: 'HOST_START_VERSES', payload: { roomCode: room.code } });
+  };
+
+  const handleSetVerses = (verses: { reference: string; text: string }[]) => {
+    if (!room) return;
+    sendMessage({ type: 'HOST_SET_VERSES', payload: { roomCode: room.code, verses } });
+  };
+
+  const handleSubmitVerse = (verseIndex: number, order: string[]) => {
+    if (!room) return;
+    sendMessage({ type: 'VERSE_SUBMIT', payload: { roomCode: room.code, verseIndex, order } });
+  };
+
   const handlePiecePlaced = (piecesCount: number) => {
     if (!room) return;
     sendMessage({
@@ -358,13 +384,15 @@ export default function App() {
 
   const stageDisplayNames: Record<string, string> = {
     LOBBY: 'Sala de Espera',
+    VERSES_STAGE: 'Ordena los versículos',
+    VERSES_RESULTS: 'Tabla de resultados',
     PUZZLE_STAGE: `Ronda ${room?.currentRound} · Rompecabezas`,
     ABYSS_STAGE: `Ronda ${room?.currentRound} · Sin Caer al Abismo`,
     ROUND_RECAP: `Resumen · Ronda ${room?.currentRound}`,
     FINAL_PODIUM: 'Gran Podio Final'
   };
 
-  const showHostBar = !!room && isHost && room.stage !== 'LOBBY' && room.stage !== 'FINAL_PODIUM';
+  const showHostBar = !!room && isHost && room.stage !== 'LOBBY' && room.stage !== 'VERSES_RESULTS' && room.stage !== 'FINAL_PODIUM';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
@@ -458,8 +486,23 @@ export default function App() {
             hostKeyRequired={hostKeyRequired}
             onCreateRoom={handleCreateRoom}
             onJoinRoom={handleJoinRoom}
-            onStartGame={handleStartGame}
+            onStartGame={handleStartVerses}
+            onOpenVerseEditor={() => setIsVerseEditorOpen(true)}
             onOpenStoryModal={() => setIsStoryModalOpen(true)}
+          />
+        ) : room.stage === 'VERSES_STAGE' ? (
+          <VersesBoard
+            room={room}
+            myPlayerId={myPlayerId}
+            onSubmit={handleSubmitVerse}
+            lastResult={lastVerseResult}
+          />
+        ) : room.stage === 'VERSES_RESULTS' ? (
+          <VersesResults
+            room={room}
+            myPlayerId={myPlayerId}
+            onStartExtra={handleStartGame}
+            onResetGame={handleResetGame}
           />
         ) : room.stage === 'PUZZLE_STAGE' ? (
           <Puzzle24Board
@@ -504,19 +547,21 @@ export default function App() {
             {/* El título de la historia solo aparece en el resumen: antes revelaría la respuesta */}
             <span className="text-slate-300 truncate">
               <span className="emoji mr-1">{STAGE_EMOJI[room.stage]}</span>
-              Ronda {room.currentRound} de {room.totalRounds}
+              {room.stage === 'VERSES_STAGE' ? 'Juego principal' : `Ronda extra ${room.currentRound} de ${room.totalRounds}`}
               {room.stage === 'ROUND_RECAP' && ` · ${room.story.title}`}
             </span>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setIsStoryModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 hover:border-amber-400 bg-slate-800 text-slate-100 hover:text-amber-300 font-medium transition-colors"
-            >
-              <ImagePlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Cambiar imagen</span>
-            </button>
+            {room.stage !== 'VERSES_STAGE' && (
+              <button
+                onClick={() => setIsStoryModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 hover:border-amber-400 bg-slate-800 text-slate-100 hover:text-amber-300 font-medium transition-colors"
+              >
+                <ImagePlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Cambiar imagen</span>
+              </button>
+            )}
 
             <button
               onClick={handleNextStage}
@@ -536,6 +581,14 @@ export default function App() {
         onClose={() => setIsStoryModalOpen(false)}
         onSelectStory={handleSelectStory}
         onUploadCustomStory={handleUploadCustomStory}
+      />
+
+      {/* Editor de versículos (solo el líder, en la sala de espera) */}
+      <VerseEditorModal
+        isOpen={isVerseEditorOpen}
+        verses={room ? room.verses : []}
+        onClose={() => setIsVerseEditorOpen(false)}
+        onSave={handleSetVerses}
       />
 
       {/* Reacciones en vivo para la llamada de Teams */}

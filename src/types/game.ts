@@ -1,5 +1,7 @@
 export type GameStage =
   | 'LOBBY'
+  | 'VERSES_STAGE'
+  | 'VERSES_RESULTS'
   | 'PUZZLE_STAGE'
   | 'ABYSS_STAGE'
   | 'ROUND_RECAP'
@@ -21,6 +23,13 @@ export interface BiblicalStory {
   imageUrl?: string; // Optional image URL or base64 data URL
 }
 
+/** Un versículo del juego de ordenar: sus frases van en el orden correcto */
+export interface VerseChallenge {
+  reference: string;
+  text: string;
+  phrases: string[];
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -34,6 +43,11 @@ export interface Player {
   abyssPoints: number;
   abyssStrikes: number;
   hasBuzzed?: boolean;
+  // Juego de ordenar versículos (define la tabla oficial)
+  versesDone: number; // versículos ordenados correctamente
+  verseTimeMs: number; // tiempo hasta el último versículo ordenado
+  verseMistakes: number; // intentos equivocados (cada uno suma penalización)
+  verseFinished: boolean;
 }
 
 export interface RoomState {
@@ -46,6 +60,9 @@ export interface RoomState {
   isTimerRunning: boolean;
   story: BiblicalStory;
   players: Record<string, Player>;
+  // Juego de ordenar versículos
+  verses: VerseChallenge[];
+  versesStartedAt?: number;
   // Abyss board shared state
   abyssGuessedLetters: string[];
   abyssStrikes: number; // max 6
@@ -74,6 +91,9 @@ export type ClientMessage =
   | { type: 'JOIN_ROOM'; payload: { roomCode: string; playerName: string; avatar: string } }
   | { type: 'REJOIN_ROOM'; payload: { roomCode: string; playerId: string; token: string } }
   | { type: 'HOST_START_ROUND'; payload: { roomCode: string } }
+  | { type: 'HOST_SET_VERSES'; payload: { roomCode: string; verses: { reference: string; text: string }[] } }
+  | { type: 'HOST_START_VERSES'; payload: { roomCode: string } }
+  | { type: 'VERSE_SUBMIT'; payload: { roomCode: string; verseIndex: number; order: string[] } }
   | { type: 'HOST_NEXT_STAGE'; payload: { roomCode: string } }
   | { type: 'HOST_RESET_GAME'; payload: { roomCode: string } }
   | { type: 'HOST_SELECT_STORY'; payload: { roomCode: string; story: BiblicalStory } }
@@ -89,6 +109,7 @@ export type ServerMessage =
   | { type: 'ROOM_CREATED'; payload: { room: RoomState; playerId: string; token: string } }
   | { type: 'ROOM_JOINED'; payload: { room: RoomState; playerId: string; token: string } }
   | { type: 'REJOIN_FAILED' }
+  | { type: 'VERSE_RESULT'; payload: { verseIndex: number; correct: boolean } }
   | { type: 'STATE_UPDATE'; payload: { room: RoomState } }
   | { type: 'TIMER_TICK'; payload: { seconds: number } }
   | { type: 'NOTIFICATION'; payload: { message: string; type: 'info' | 'success' | 'warning' } }

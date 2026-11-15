@@ -60,7 +60,7 @@ export const FinalPodium: React.FC<FinalPodiumProps> = ({
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teams-500/20 border border-teams-500/50 text-sm font-semibold text-slate-100 mb-3">
           <span className="emoji">🎉</span>
-          <span>¡Gran final del Día del Amigo!</span>
+          <span>Rondas extra · rompecabezas y personaje</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-bold font-cinzel mb-3 bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-transparent">
           Podio de Campeones

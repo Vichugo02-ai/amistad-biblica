@@ -166,6 +166,43 @@
   }
 }
 
+/*
+  Escenas que siempre son de noche (el puente en celular): dentro de
+  `.scene-dark` los colores vuelven a ser los del modo oscuro aunque la app
+  esté en modo claro.
+*/
+.scene-dark {
+  color-scheme: dark;
+  --color-slate-50: #f6f7ff;
+  --color-slate-100: #eceefc;
+  --color-slate-200: #d8dcf5;
+  --color-slate-300: #bcc2e6;
+  --color-slate-400: #9aa1cf;
+  --color-slate-500: #7f86b8;
+  --color-slate-600: #575d94;
+  --color-slate-700: #3b4078;
+  --color-slate-800: #2a2e5c;
+  --color-slate-900: #181b40;
+  --color-slate-950: #0d0f2b;
+  --color-amber-100: #fff1c7;
+  --color-amber-200: #ffe59a;
+  --color-amber-300: #ffd76a;
+  --color-amber-400: #ffc53d;
+  --color-amber-500: #f5a623;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-950: #022c22;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-rose-400: #fb7185;
+  --color-rose-500: #f43f5e;
+  --color-rose-950: #4c0519;
+  --color-teams-300: #a9acf8;
+  --color-teams-400: #8b8ff5;
+}
+
 /* Emojis: misma fuente de color en Windows, Mac, Android y iPhone */
 .emoji {
   font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;

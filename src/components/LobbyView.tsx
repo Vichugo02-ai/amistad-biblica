@@ -12,7 +12,6 @@ import {
   KeyRound,
   Link2,
   Loader2,
-  MonitorUp,
   Puzzle,
   Mountain,
   LogIn,
@@ -28,26 +27,27 @@ interface LobbyViewProps {
   onJoinRoom: (code: string, playerName: string, avatar: string) => void;
   onStartGame: () => void;
   onOpenStoryModal: () => void;
+  onOpenVerseEditor: () => void;
 }
 
 const HOW_TO_STEPS = [
   {
-    Icon: MonitorUp,
-    emoji: '🖥️',
-    title: '1. Comparte pantalla',
-    text: 'El anfitrión comparte esta pestaña en Teams para proyectar la tabla de posiciones y el puente colgante.'
+    Icon: BookOpen,
+    emoji: '📜',
+    title: '1. Ordena los versículos',
+    text: 'Juego principal: cada quien arma tres versículos tocando sus frases en orden. El menor tiempo gana y define la tabla oficial.'
   },
   {
     Icon: Puzzle,
     emoji: '🧩',
-    title: '2. Arma el Puzzle 24',
-    text: 'Cada participante coloca las 24 piezas de la escena bíblica en su propio dispositivo y suma puntos por velocidad.'
+    title: '2. Rompecabezas (extra)',
+    text: 'Si quieren seguir jugando, cada participante arma las 24 piezas de una escena bíblica en su propio dispositivo.'
   },
   {
     Icon: Mountain,
     emoji: '🌉',
-    title: '3. Sin Caer al Abismo',
-    text: 'Adivinen las letras del personaje bíblico sin fallar más de 6 veces para cruzar el puente triunfantes.'
+    title: '3. Sin Caer al Abismo (extra)',
+    text: 'Adivinen las letras del personaje bíblico sin fallar más de 6 veces para que el pastor cruce el puente.'
   }
 ];
 
@@ -76,7 +76,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onCreateRoom,
   onJoinRoom,
   onStartGame,
-  onOpenStoryModal
+  onOpenStoryModal,
+  onOpenVerseEditor
 }) => {
   const [tab, setTab] = useState<'join' | 'create'>('join');
   const [name, setName] = useState('');
@@ -146,12 +147,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             Conexión Amistad Bíblica
           </h1>
           <p className="max-w-2xl mx-auto text-base text-slate-300">
-            Compite con hasta 20 hermanos: arma el rompecabezas de 24 piezas, adivina el personaje bíblico sin caer al abismo y celebra la comunión en Cristo con puntuación automática.
+            Compite con hasta 20 hermanos: ordena tres versículos en el menor tiempo y, si quieren seguir, armen el rompecabezas y adivinen el personaje bíblico sin caer al abismo.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 mt-5 text-sm font-medium text-slate-200">
-            <span className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800"><span className="emoji mr-1.5">🧩</span>Puzzle de 24 piezas</span>
-            <span className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800"><span className="emoji mr-1.5">🌉</span>Sin Caer al Abismo</span>
-            <span className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800"><span className="emoji mr-1.5">🏆</span>Podio automático</span>
+            <span className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800"><span className="emoji mr-1.5">📜</span>Ordena los versículos</span>
+            <span className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800"><span className="emoji mr-1.5">🧩</span>Rompecabezas y personaje</span>
+            <span className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800"><span className="emoji mr-1.5">🏆</span>Tabla automática</span>
           </div>
         </div>
 
@@ -244,7 +245,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             {tab === 'create' && (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  Imagen de la ronda 1
+                  Imagen del rompecabezas (ronda extra)
                 </label>
                 <button
                   type="button"
@@ -396,7 +397,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <StoryThumb story={currentStory} className="w-20 h-14 rounded-lg" />
               <div className="overflow-hidden">
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-amber-300 block">
-                  <span className="emoji mr-1">🧩</span>Imagen de la ronda 1
+                  <span className="emoji mr-1">🧩</span>Rompecabezas de la ronda extra
                 </span>
                 <span className="text-sm font-bold text-slate-100 block truncate">
                   Escena bíblica sorpresa
@@ -428,10 +429,20 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-bold text-lg rounded-2xl transition-all shadow-xl shadow-emerald-500/25 active:scale-95"
               >
                 <Play className="w-5 h-5 fill-current" />
-                <span>Iniciar competencia</span>
+                <span>Iniciar: ordenar versículos</span>
               </button>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={onOpenVerseEditor}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 hover:border-amber-400 bg-slate-900 text-amber-300 hover:text-amber-200 text-xs font-semibold transition-colors"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Ver o cambiar los 3 versículos</span>
+                </button>
+              </div>
               <p className="text-xs text-slate-400 mt-3">
-                Al hacer clic comienza para todos la ronda 1: el rompecabezas de 24 piezas.
+                Al hacer clic comienza para todos el juego principal. El rompecabezas y el personaje quedan como rondas extra.
               </p>
             </div>
           ) : (

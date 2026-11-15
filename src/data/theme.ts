@@ -43,6 +43,8 @@ export const QUICK_REACTIONS: { emoji: string; label: string }[] = [
 // Emoji que identifica cada etapa del juego
 export const STAGE_EMOJI: Record<string, string> = {
   LOBBY: '👋',
+  VERSES_STAGE: '📜',
+  VERSES_RESULTS: '🏆',
   PUZZLE_STAGE: '🧩',
   ABYSS_STAGE: '🌉',
   ROUND_RECAP: '📊',
