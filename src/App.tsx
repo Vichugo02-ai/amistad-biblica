@@ -12,18 +12,22 @@ import { ReactionsOverlay } from './components/ReactionsOverlay';
 import { StorySelectorModal } from './components/StorySelectorModal';
 import { AlertTriangle, CheckCircle2, Info, ArrowRight, WifiOff, ImagePlus, Crown } from 'lucide-react';
 
-// Sesión guardada en el navegador para volver a la misma sala tras recargar o cerrar la pestaña
+// Sesión para volver a la misma sala.
+//  - En la pestaña (sessionStorage): sirve para recargar; cada pestaña conserva su propio jugador.
+//  - En el navegador (localStorage): sirve tras cerrar la pestaña; se ofrece con un botón "Volver a mi sala".
 const SESSION_KEY = 'amistad-biblica-sesion';
 
 interface SavedSession {
   roomCode: string;
   playerId: string;
   token: string;
+  name: string;
+  isHost: boolean;
 }
 
-function readSession(): SavedSession | null {
+function readFrom(storage: 'sessionStorage' | 'localStorage'): SavedSession | null {
   try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
+    const raw = window[storage].getItem(SESSION_KEY);
     return raw ? (JSON.parse(raw) as SavedSession) : null;
   } catch {
     return null;
@@ -32,7 +36,12 @@ function readSession(): SavedSession | null {
 
 function saveSession(session: SavedSession) {
   try {
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    // Si en este navegador ya está guardado el anfitrión de esta sala, un invitado
+    // que entre desde otra pestaña no lo reemplaza.
+    const saved = readFrom('localStorage');
+    const keepHost = saved && saved.roomCode === session.roomCode && saved.isHost && !session.isHost;
+    if (!keepHost) window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   } catch {
     // sin almacenamiento disponible: la app funciona, pero no podrá reconectar
   }
@@ -40,6 +49,7 @@ function saveSession(session: SavedSession) {
 
 function clearSession() {
   try {
+    window.sessionStorage.removeItem(SESSION_KEY);
     window.localStorage.removeItem(SESSION_KEY);
   } catch {
     // nada que borrar
@@ -56,6 +66,9 @@ export default function App() {
   const [toast, setToast] = useState<{ id: string; message: string; type: 'info' | 'success' | 'warning' } | null>(null);
   const [incomingReaction, setIncomingReaction] = useState<{ id: string; emoji: string; playerName: string } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+
+  // Sala anterior guardada en este navegador, para ofrecer "Volver a mi sala"
+  const [resumable, setResumable] = useState<SavedSession | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -83,12 +96,18 @@ export default function App() {
     ws.onopen = () => {
       setConnectionStatus('connected');
 
-      // Si este navegador ya estaba en una sala, vuelve a ella con el mismo jugador.
-      // No aplica si el enlace abierto es de otra sala distinta.
-      const session = readSession();
       const roomInUrl = new URLSearchParams(window.location.search).get('room')?.toUpperCase();
-      if (session && (!roomInUrl || roomInUrl === session.roomCode)) {
-        ws.send(JSON.stringify({ type: 'REJOIN_ROOM', payload: session }));
+      const matchesUrl = (session: SavedSession | null) =>
+        session && (!roomInUrl || roomInUrl === session.roomCode) ? session : null;
+
+      // Recarga de la misma pestaña: vuelve sola a su sala, con el mismo jugador
+      const tabSession = matchesUrl(readFrom('sessionStorage'));
+      if (tabSession) {
+        const { roomCode, playerId, token } = tabSession;
+        ws.send(JSON.stringify({ type: 'REJOIN_ROOM', payload: { roomCode, playerId, token } }));
+      } else {
+        // Pestaña nueva: no entra sola; ofrece el botón para volver
+        setResumable(matchesUrl(readFrom('localStorage')));
       }
     };
 
@@ -103,15 +122,24 @@ export default function App() {
             saveSession({
               roomCode: msg.payload.room.code,
               playerId: msg.payload.playerId,
-              token: msg.payload.token
+              token: msg.payload.token,
+              name: msg.payload.room.players[msg.payload.playerId]?.name ?? '',
+              isHost: msg.payload.room.hostId === msg.payload.playerId
             });
+            setResumable(null);
             break;
 
           case 'REJOIN_FAILED':
             // La sala ya no existe (por ejemplo, el servidor se reinició)
             clearSession();
+            setResumable(null);
             setRoom(null);
             setMyPlayerId(null);
+            setToast({
+              id: `${Date.now()}_${Math.random()}`,
+              message: 'Tu sala anterior ya no existe. Crea una nueva o únete con otro código.',
+              type: 'warning'
+            });
             break;
 
           case 'STATE_UPDATE':
@@ -292,6 +320,12 @@ export default function App() {
     });
   };
 
+  const handleResumeRoom = () => {
+    if (!resumable) return;
+    const { roomCode, playerId, token } = resumable;
+    sendMessage({ type: 'REJOIN_ROOM', payload: { roomCode, playerId, token } });
+  };
+
   const handleLeaveRoom = () => {
     const warning = isHost
       ? '¿Salir de la sala? Eres el anfitrión: sin ti nadie podrá avanzar la partida.'
@@ -374,6 +408,38 @@ export default function App() {
 
       {/* Main Game Stage View */}
       <main className="flex-1 pb-20">
+        {/* Volver a la sala en la que ya estaba este navegador */}
+        {!room && resumable && (
+          <div className="max-w-md mx-auto px-4 pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl bg-teams-500/20 border border-teams-500/50">
+              <div className="flex-1 min-w-0 text-sm text-slate-100">
+                <span className="font-bold block">
+                  Ya estabas en la sala {resumable.roomCode}
+                </span>
+                <span className="text-slate-300 flex items-center gap-1.5">
+                  {resumable.isHost && <Crown className="w-4 h-4 text-amber-400 shrink-0" />}
+                  <span className="truncate">
+                    {resumable.name} · {resumable.isHost ? 'anfitrión' : 'participante'}
+                  </span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleResumeRoom}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-slate-950 font-bold text-sm transition-colors"
+                >
+                  Volver a mi sala
+                </button>
+                <button
+                  onClick={() => { clearSession(); setResumable(null); }}
+                  className="px-3 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 text-sm font-semibold transition-colors"
+                >
+                  Descartar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {!room || room.stage === 'LOBBY' ? (
           <LobbyView
             room={room}
