@@ -70,7 +70,17 @@ export default function App() {
   // Sala anterior guardada en este navegador, para ofrecer "Volver a mi sala"
   const [resumable, setResumable] = useState<SavedSession | null>(null);
 
+  // ¿El servidor exige clave de líder para crear salas? (variable HOST_KEY)
+  const [hostKeyRequired, setHostKeyRequired] = useState<boolean>(false);
+
   const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then((res) => res.json())
+      .then((config: { hostKeyRequired?: boolean }) => setHostKeyRequired(!!config.hostKeyRequired))
+      .catch(() => setHostKeyRequired(false));
+  }, []);
 
   // El modo claro/oscuro se decide con la clase `dark` en <html>;
   // los colores de cada modo están en index.css
@@ -215,10 +225,10 @@ export default function App() {
   };
 
   // Actions
-  const handleCreateRoom = (hostName: string, avatar: string, rounds: number, customStory?: BiblicalStory) => {
+  const handleCreateRoom = (hostName: string, avatar: string, rounds: number, customStory?: BiblicalStory, hostKey?: string) => {
     sendMessage({
       type: 'CREATE_ROOM',
-      payload: { hostName, avatar, rounds, customStory: customStory || selectedStory }
+      payload: { hostName, avatar, rounds, customStory: customStory || selectedStory, hostKey }
     });
   };
 
@@ -445,6 +455,7 @@ export default function App() {
             room={room}
             myPlayerId={myPlayerId}
             selectedStory={room ? room.story : selectedStory}
+            hostKeyRequired={hostKeyRequired}
             onCreateRoom={handleCreateRoom}
             onJoinRoom={handleJoinRoom}
             onStartGame={handleStartGame}

@@ -16,6 +16,15 @@ const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 3000;
 
+// Clave de líder (opcional). Si se define la variable de entorno HOST_KEY,
+// solo quien la escriba puede crear salas. Sin ella, cualquiera puede crearlas.
+const HOST_KEY = (process.env.HOST_KEY || '').trim();
+
+// La app pregunta aquí si debe pedir la clave (nunca se envía la clave misma)
+app.get('/api/config', (_req, res) => {
+  res.json({ hostKeyRequired: HOST_KEY.length > 0 });
+});
+
 // In-memory room store
 const rooms = new Map<string, RoomState>();
 const socketMeta = new Map<WebSocket, { roomCode: string; playerId: string }>();
@@ -133,6 +142,14 @@ wss.on('connection', (ws: WebSocket) => {
 
       switch (msg.type) {
         case 'CREATE_ROOM': {
+          if (HOST_KEY && (msg.payload.hostKey || '').trim() !== HOST_KEY) {
+            ws.send(JSON.stringify({
+              type: 'ERROR',
+              payload: { message: 'Clave de líder incorrecta. Solo el líder puede crear salas.' }
+            }));
+            return;
+          }
+
           const roomCode = generateRoomCode();
           const hostId = `player_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
           const hostPlayer: Player = {

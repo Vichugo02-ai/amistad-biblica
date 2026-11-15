@@ -70,7 +70,7 @@ export interface PuzzlePiece {
 }
 
 export type ClientMessage =
-  | { type: 'CREATE_ROOM'; payload: { hostName: string; avatar: string; rounds?: number; customStory?: BiblicalStory } }
+  | { type: 'CREATE_ROOM'; payload: { hostName: string; avatar: string; rounds?: number; customStory?: BiblicalStory; hostKey?: string } }
   | { type: 'JOIN_ROOM'; payload: { roomCode: string; playerName: string; avatar: string } }
   | { type: 'REJOIN_ROOM'; payload: { roomCode: string; playerId: string; token: string } }
   | { type: 'HOST_START_ROUND'; payload: { roomCode: string } }

@@ -23,7 +23,8 @@ interface LobbyViewProps {
   room: RoomState | null;
   myPlayerId: string | null;
   selectedStory: BiblicalStory;
-  onCreateRoom: (hostName: string, avatar: string, rounds: number, customStory?: BiblicalStory) => void;
+  hostKeyRequired: boolean;
+  onCreateRoom: (hostName: string, avatar: string, rounds: number, customStory?: BiblicalStory, hostKey?: string) => void;
   onJoinRoom: (code: string, playerName: string, avatar: string) => void;
   onStartGame: () => void;
   onOpenStoryModal: () => void;
@@ -71,6 +72,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   room,
   myPlayerId,
   selectedStory,
+  hostKeyRequired,
   onCreateRoom,
   onJoinRoom,
   onStartGame,
@@ -83,6 +85,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const [selectedRounds, setSelectedRounds] = useState(3);
   const [copiedLink, setCopiedLink] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [hostKey, setHostKey] = useState('');
+  // Quien llega con el enlace de invitación solo ve el formulario para unirse
+  const [invitedByLink, setInvitedByLink] = useState(false);
 
   // Check URL params for quick join code
   useEffect(() => {
@@ -92,6 +97,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       if (codeFromUrl) {
         setRoomCodeInput(codeFromUrl.toUpperCase());
         setTab('join');
+        setInvitedByLink(true);
       }
     }
   }, []);
@@ -113,8 +119,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       setFormError(null);
       onJoinRoom(roomCodeInput, name, selectedAvatar);
     } else {
+      if (hostKeyRequired && !hostKey.trim()) {
+        setFormError('Escribe la clave de líder para crear la sala.');
+        return;
+      }
       setFormError(null);
-      onCreateRoom(name, selectedAvatar, selectedRounds, selectedStory);
+      onCreateRoom(name, selectedAvatar, selectedRounds, selectedStory, hostKey.trim());
     }
   };
 
@@ -146,7 +156,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         </div>
 
         {/* Tab Toggle */}
-        <div className="max-w-md mx-auto mb-6">
+        <div className={`max-w-md mx-auto mb-6 ${invitedByLink ? 'hidden' : ''}`}>
           <div className="flex p-1 bg-slate-900 border border-slate-800 rounded-2xl">
             <button
               onClick={() => { setTab('join'); setFormError(null); }}
@@ -211,6 +221,23 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {tab === 'create' && hostKeyRequired && (
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  Clave de líder
+                </label>
+                <input
+                  type="password"
+                  value={hostKey}
+                  onChange={(e) => setHostKey(e.target.value)}
+                  placeholder="Solo el líder la conoce"
+                  autoComplete="off"
+                  className="w-full px-4 py-3 bg-slate-950 border-2 border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-amber-400 placeholder:text-slate-600"
+                />
               </div>
             )}
 
