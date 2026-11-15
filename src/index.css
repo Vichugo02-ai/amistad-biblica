@@ -1,0 +1,229 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  PALETA "NOCHE DE AMISTAD" (pensada para compartir pantalla en Teams)
+  ------------------------------------------------------------------
+  Se redefinen las escalas `slate` y `amber` de Tailwind, así TODOS los
+  componentes cambian de color sin tocar sus clases:
+    - slate  -> azul índigo profundo (familia del violeta de Teams)
+    - amber  -> oro cálido y luminoso (acciones, puntos, victoria)
+    - teams  -> violeta de marca Teams (insignias de sala y anfitrión)
+    - coral  -> acento de amistad (tercer lugar, caídas)
+  Esmeralda (acierto) y rosa (error) quedan con los valores de Tailwind.
+
+  MODO CLARO: más abajo, `html:not(.dark)` invierte estas mismas variables.
+  Por eso los componentes no necesitan clases `dark:`; basta con que el
+  botón del sol/luna quite o ponga la clase `dark` en <html>.
+*/
+@theme {
+  --font-serif: 'Cinzel', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif,
+    'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji';
+
+  /* Superficies y texto: índigo nocturno */
+  --color-slate-50: #f6f7ff;
+  --color-slate-100: #eceefc;
+  --color-slate-200: #d8dcf5;
+  --color-slate-300: #bcc2e6;
+  --color-slate-400: #9aa1cf;
+  --color-slate-500: #7f86b8;
+  --color-slate-600: #575d94;
+  --color-slate-700: #3b4078;
+  --color-slate-800: #2a2e5c;
+  --color-slate-900: #181b40;
+  --color-slate-950: #0d0f2b;
+
+  /* Acento principal: oro cálido */
+  --color-amber-50: #fff9e8;
+  --color-amber-100: #fff1c7;
+  --color-amber-200: #ffe59a;
+  --color-amber-300: #ffd76a;
+  --color-amber-400: #ffc53d;
+  --color-amber-500: #f5a623;
+  --color-amber-600: #db8a0b;
+  --color-amber-700: #b06a08;
+  --color-amber-800: #8a520b;
+  --color-amber-900: #6b400d;
+  --color-amber-950: #3a2305;
+
+  /* Violeta de marca Teams */
+  --color-teams-200: #c5c7fb;
+  --color-teams-300: #a9acf8;
+  --color-teams-400: #8b8ff5;
+  --color-teams-500: #5b5fc7;
+  --color-teams-600: #4f52b2;
+  --color-teams-700: #444791;
+
+  /* Coral de amistad */
+  --color-coral-300: #ffa69e;
+  --color-coral-400: #ff7f73;
+  --color-coral-500: #f25f5c;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    /* Resplandores del fondo */
+    --glow-a: rgb(91 95 199 / 0.28);
+    --glow-b: rgb(245 166 35 / 0.1);
+    --glow-c: rgb(91 95 199 / 0.16);
+  }
+
+  /*
+    MODO CLARO
+    Cada tono se cambia por su opuesto: los fondos oscuros pasan a claros y
+    los textos claros pasan a oscuros. Los acentos (oro, verde, rosa) se
+    oscurecen para que se lean sobre blanco y para que el texto de los
+    botones (que ahora es claro) tenga buen contraste.
+  */
+  html:not(.dark) {
+    color-scheme: light;
+    --glow-a: rgb(91 95 199 / 0.16);
+    --glow-b: rgb(245 166 35 / 0.16);
+    --glow-c: rgb(91 95 199 / 0.1);
+
+    --color-slate-50: #0d0f2b;
+    --color-slate-100: #181b40;
+    --color-slate-200: #2a2e5c;
+    --color-slate-300: #3b4078;
+    --color-slate-400: #555b8c;
+    --color-slate-500: #6b72a3;
+    --color-slate-600: #9198c2;
+    --color-slate-700: #c3c8e4;
+    --color-slate-800: #dfe2f3;
+    --color-slate-900: #ffffff;
+    --color-slate-950: #f1f2fb;
+
+    --color-amber-50: #2e1c00;
+    --color-amber-100: #4a2f00;
+    --color-amber-200: #6b4100;
+    --color-amber-300: #7d4c00;
+    --color-amber-400: #9e6100;
+    --color-amber-500: #945a00;
+    --color-amber-600: #a86a00;
+    --color-amber-700: #c08a2a;
+    --color-amber-800: #dcb261;
+    --color-amber-900: #f1d79b;
+    --color-amber-950: #fff4d6;
+
+    --color-emerald-100: #053b2d;
+    --color-emerald-200: #064e3b;
+    --color-emerald-300: #065f46;
+    --color-emerald-400: #047857;
+    --color-emerald-500: #05805c;
+    --color-emerald-950: #e8faf3;
+
+    --color-teal-300: #115e59;
+    --color-teal-400: #0f766e;
+    --color-teal-500: #0f766e;
+
+    --color-rose-100: #6b0f2b;
+    --color-rose-200: #881337;
+    --color-rose-300: #9f1239;
+    --color-rose-400: #be123c;
+    --color-rose-500: #e11d48;
+    --color-rose-950: #fff1f3;
+
+    --color-teams-200: #3d4084;
+    --color-teams-300: #4f52b2;
+    --color-teams-400: #4f52b2;
+
+    --color-coral-300: #b3362f;
+    --color-coral-400: #d9534f;
+    --color-coral-500: #c9403c;
+  }
+
+  /* Texto un poco más grande en pantallas anchas: se lee mejor al compartir pantalla */
+  @media (min-width: 1280px) {
+    html {
+      font-size: 17px;
+    }
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-slate-950);
+  }
+
+  h1, h2, h3, .font-cinzel {
+    font-family: var(--font-serif);
+  }
+
+  /* Resplandor suave de fondo (violeta Teams arriba, oro a la derecha) */
+  #root > div {
+    background-image:
+      radial-gradient(60rem 28rem at 15% -10%, var(--glow-a), transparent 60%),
+      radial-gradient(48rem 24rem at 100% 0%, var(--glow-b), transparent 60%),
+      radial-gradient(60rem 30rem at 50% 115%, var(--glow-c), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  /* Foco visible para quien navega con teclado */
+  :focus-visible {
+    outline: 2px solid var(--color-amber-400);
+    outline-offset: 2px;
+  }
+}
+
+/* Emojis: misma fuente de color en Windows, Mac, Android y iPhone */
+.emoji {
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  font-style: normal;
+  line-height: 1;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-260px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes softGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(255 197 61 / 0.35); }
+  50% { box-shadow: 0 0 0 10px rgb(255 197 61 / 0); }
+}
+
+.animate-float-up {
+  animation: floatUp 2.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-soft-glow {
+  animation: softGlow 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-up,
+  .animate-shake,
+  .animate-fade-in,
+  .animate-soft-glow {
+    animation: none;
+  }
+}
