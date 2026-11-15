@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Moon, Sun, Users, Copy, Check, HeartHandshake, Crown } from 'lucide-react';
+import { Volume2, VolumeX, Moon, Sun, Users, Copy, Check, HeartHandshake, Crown, LogOut } from 'lucide-react';
 import { audioFx } from '../utils/audio';
 
 interface NavbarProps {
@@ -13,6 +13,7 @@ interface NavbarProps {
   setDarkMode: (val: boolean) => void;
   muted: boolean;
   setMuted: (val: boolean) => void;
+  onLeaveRoom?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -25,7 +26,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   darkMode,
   setDarkMode,
   muted,
-  setMuted
+  setMuted,
+  onLeaveRoom
 }) => {
   const [copied, setCopied] = React.useState(false);
 
@@ -45,7 +47,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="flex items-center justify-between gap-4 md:gap-8 px-4 md:px-6 py-3 border-b border-teams-500/30 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40">
       {/* Zona 1: logo y nombre */}
-      <a href="/" className="flex items-center gap-2.5 whitespace-nowrap shrink-0 group">
+      <a
+        href="/"
+        onClick={(e) => {
+          // Dentro de una sala el logo no navega: evita salirse por accidente
+          if (roomCode) e.preventDefault();
+        }}
+        className="flex items-center gap-2.5 whitespace-nowrap shrink-0 group"
+      >
         <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/25">
           <HeartHandshake className="w-5 h-5" strokeWidth={2.25} />
         </span>
@@ -116,6 +125,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
+        {roomCode && onLeaveRoom && (
+          <button
+            onClick={onLeaveRoom}
+            title="Salir de la sala"
+            className="p-2.5 text-slate-300 hover:text-rose-300 transition-colors rounded-xl hover:bg-rose-500/15"
+            aria-label="Salir de la sala"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </header>
   );

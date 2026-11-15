@@ -1,8 +1,8 @@
-export type GameStage = 
-  | 'LOBBY' 
-  | 'PUZZLE_STAGE' 
-  | 'ABYSS_STAGE' 
-  | 'ROUND_RECAP' 
+export type GameStage =
+  | 'LOBBY'
+  | 'PUZZLE_STAGE'
+  | 'ABYSS_STAGE'
+  | 'ROUND_RECAP'
   | 'FINAL_PODIUM';
 
 export interface BiblicalStory {
@@ -72,6 +72,7 @@ export interface PuzzlePiece {
 export type ClientMessage =
   | { type: 'CREATE_ROOM'; payload: { hostName: string; avatar: string; rounds?: number; customStory?: BiblicalStory } }
   | { type: 'JOIN_ROOM'; payload: { roomCode: string; playerName: string; avatar: string } }
+  | { type: 'REJOIN_ROOM'; payload: { roomCode: string; playerId: string; token: string } }
   | { type: 'HOST_START_ROUND'; payload: { roomCode: string } }
   | { type: 'HOST_NEXT_STAGE'; payload: { roomCode: string } }
   | { type: 'HOST_RESET_GAME'; payload: { roomCode: string } }
@@ -85,8 +86,9 @@ export type ClientMessage =
   | { type: 'SEND_REACTION'; payload: { roomCode: string; emoji: string } };
 
 export type ServerMessage =
-  | { type: 'ROOM_CREATED'; payload: { room: RoomState; playerId: string } }
-  | { type: 'ROOM_JOINED'; payload: { room: RoomState; playerId: string } }
+  | { type: 'ROOM_CREATED'; payload: { room: RoomState; playerId: string; token: string } }
+  | { type: 'ROOM_JOINED'; payload: { room: RoomState; playerId: string; token: string } }
+  | { type: 'REJOIN_FAILED' }
   | { type: 'STATE_UPDATE'; payload: { room: RoomState } }
   | { type: 'TIMER_TICK'; payload: { seconds: number } }
   | { type: 'NOTIFICATION'; payload: { message: string; type: 'info' | 'success' | 'warning' } }

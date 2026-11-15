@@ -12,6 +12,40 @@ import { ReactionsOverlay } from './components/ReactionsOverlay';
 import { StorySelectorModal } from './components/StorySelectorModal';
 import { AlertTriangle, CheckCircle2, Info, ArrowRight, WifiOff, ImagePlus, Crown } from 'lucide-react';
 
+// Sesión guardada en el navegador para volver a la misma sala tras recargar o cerrar la pestaña
+const SESSION_KEY = 'amistad-biblica-sesion';
+
+interface SavedSession {
+  roomCode: string;
+  playerId: string;
+  token: string;
+}
+
+function readSession(): SavedSession | null {
+  try {
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as SavedSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(session: SavedSession) {
+  try {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // sin almacenamiento disponible: la app funciona, pero no podrá reconectar
+  }
+}
+
+function clearSession() {
+  try {
+    window.localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // nada que borrar
+  }
+}
+
 export default function App() {
   const [room, setRoom] = useState<RoomState | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
@@ -48,6 +82,14 @@ export default function App() {
 
     ws.onopen = () => {
       setConnectionStatus('connected');
+
+      // Si este navegador ya estaba en una sala, vuelve a ella con el mismo jugador.
+      // No aplica si el enlace abierto es de otra sala distinta.
+      const session = readSession();
+      const roomInUrl = new URLSearchParams(window.location.search).get('room')?.toUpperCase();
+      if (session && (!roomInUrl || roomInUrl === session.roomCode)) {
+        ws.send(JSON.stringify({ type: 'REJOIN_ROOM', payload: session }));
+      }
     };
 
     ws.onmessage = (event) => {
@@ -55,13 +97,21 @@ export default function App() {
         const msg: ServerMessage = JSON.parse(event.data);
         switch (msg.type) {
           case 'ROOM_CREATED':
-            setRoom(msg.payload.room);
-            setMyPlayerId(msg.payload.playerId);
-            break;
-
           case 'ROOM_JOINED':
             setRoom(msg.payload.room);
             setMyPlayerId(msg.payload.playerId);
+            saveSession({
+              roomCode: msg.payload.room.code,
+              playerId: msg.payload.playerId,
+              token: msg.payload.token
+            });
+            break;
+
+          case 'REJOIN_FAILED':
+            // La sala ya no existe (por ejemplo, el servidor se reinició)
+            clearSession();
+            setRoom(null);
+            setMyPlayerId(null);
             break;
 
           case 'STATE_UPDATE':
@@ -242,6 +292,15 @@ export default function App() {
     });
   };
 
+  const handleLeaveRoom = () => {
+    const warning = isHost
+      ? '¿Salir de la sala? Eres el anfitrión: sin ti nadie podrá avanzar la partida.'
+      : '¿Salir de la sala? Perderás tu lugar y tus puntos.';
+    if (!window.confirm(warning)) return;
+    clearSession();
+    window.location.href = '/';
+  };
+
   const handleSendReaction = (emoji: string) => {
     if (!room) return;
     sendMessage({
@@ -277,6 +336,7 @@ export default function App() {
         setDarkMode={setDarkMode}
         muted={muted}
         setMuted={setMuted}
+        onLeaveRoom={handleLeaveRoom}
       />
 
       {/* Connection Notice if disconnected */}

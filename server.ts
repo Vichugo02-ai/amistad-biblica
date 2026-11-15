@@ -20,6 +20,16 @@ const PORT = process.env.PORT || 3000;
 const rooms = new Map<string, RoomState>();
 const socketMeta = new Map<WebSocket, { roomCode: string; playerId: string }>();
 
+// Clave secreta de cada jugador para volver a su sala si recarga o cierra la pestaña.
+// Solo se le envía a ese jugador; nunca viaja en el estado de la sala.
+const playerTokens = new Map<string, string>();
+
+function createPlayerToken(playerId: string): string {
+  const token = `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+  playerTokens.set(playerId, token);
+  return token;
+}
+
 // Historias ya jugadas en cada sala, para no repetir imagen entre rondas
 const usedStoryIds = new Map<string, Set<string>>();
 
@@ -158,8 +168,35 @@ wss.on('connection', (ws: WebSocket) => {
 
           ws.send(JSON.stringify({
             type: 'ROOM_CREATED',
-            payload: { room: newRoom, playerId: hostId }
+            payload: { room: newRoom, playerId: hostId, token: createPlayerToken(hostId) }
           }));
+          break;
+        }
+
+        case 'REJOIN_ROOM': {
+          const code = msg.payload.roomCode.toUpperCase().trim();
+          const room = rooms.get(code);
+          const player = room?.players[msg.payload.playerId];
+          const validToken = playerTokens.get(msg.payload.playerId) === msg.payload.token;
+
+          if (!room || !player || !validToken) {
+            ws.send(JSON.stringify({ type: 'REJOIN_FAILED' }));
+            return;
+          }
+
+          // Si quedaba una conexión vieja de este jugador, se desvincula
+          for (const [otherWs, meta] of socketMeta.entries()) {
+            if (otherWs !== ws && meta.playerId === player.id) socketMeta.delete(otherWs);
+          }
+
+          player.connected = true;
+          socketMeta.set(ws, { roomCode: code, playerId: player.id });
+
+          ws.send(JSON.stringify({
+            type: 'ROOM_JOINED',
+            payload: { room, playerId: player.id, token: msg.payload.token }
+          }));
+          broadcastToRoom(code, { type: 'STATE_UPDATE', payload: { room } });
           break;
         }
 
@@ -203,7 +240,7 @@ wss.on('connection', (ws: WebSocket) => {
 
           ws.send(JSON.stringify({
             type: 'ROOM_JOINED',
-            payload: { room, playerId }
+            payload: { room, playerId, token: createPlayerToken(playerId) }
           }));
 
           broadcastToRoom(code, {
