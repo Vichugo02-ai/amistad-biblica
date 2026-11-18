@@ -219,7 +219,7 @@ export const Puzzle24Board: React.FC<Puzzle24BoardProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               onClick={() => setShowGuide(!showGuide)}
               className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-100 transition-colors"

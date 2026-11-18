@@ -2,9 +2,11 @@ import React, { useEffect } from 'react';
 import { RoomState } from '../types/game';
 import { audioFx } from '../utils/audio';
 import { MEDALS, CONFETTI_COLORS } from '../data/theme';
-import { VERSE_PENALTY_MS, formatMs, rankVersePlayers, verseTotalMs } from '../utils/verses';
+import { formatMs, rankVersePlayers, verseTotalMs } from '../utils/verses';
+import { DEFAULT_SETTINGS } from '../utils/settings';
 import confetti from 'canvas-confetti';
-import { BookOpen, Crown, Loader2, Puzzle, RotateCcw, Trophy } from 'lucide-react';
+import { BookOpen, Crown, Info, Loader2, Puzzle, RotateCcw, Timer, Trophy } from 'lucide-react';
+import { Player } from '../types/game';
 
 interface VersesResultsProps {
   room: RoomState;
@@ -12,13 +14,18 @@ interface VersesResultsProps {
   /** Rondas extra: rompecabezas y personaje bíblico */
   onStartExtra: () => void;
   onResetGame: () => void;
+  onOpenTimeSettings: () => void;
 }
 
-export const VersesResults: React.FC<VersesResultsProps> = ({ room, myPlayerId, onStartExtra, onResetGame }) => {
+export const VersesResults: React.FC<VersesResultsProps> = ({ room, myPlayerId, onStartExtra, onResetGame, onOpenTimeSettings }) => {
   const isHost = !!myPlayerId && room.hostId === myPlayerId;
   const ranked = rankVersePlayers(Object.values(room.players));
   const total = room.verses.length;
   const [first, second, third] = ranked;
+  const penaltySeconds = (room.settings ?? DEFAULT_SETTINGS).versePenaltySeconds;
+  const anyPenalty = ranked.some(p => p.versePenaltyMs > 0);
+  // Alguien terminó antes que el ganador pero quedó más abajo por el castigo
+  const overtaken = ranked.find(p => p.verseFinished && (p.verseFinishOrder ?? 99) < (first?.verseFinishOrder ?? 99));
 
   useEffect(() => {
     audioFx.playVictoryFanfare();
@@ -44,9 +51,19 @@ export const VersesResults: React.FC<VersesResultsProps> = ({ room, myPlayerId, 
         <h1 className="text-3xl md:text-5xl font-bold font-cinzel mb-2 bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-transparent">
           Resultados
         </h1>
-        <p className="text-sm text-slate-300">
-          Gana quien ordenó los {total} versículos en menos tiempo.
+        <p className="text-sm text-slate-300 max-w-xl mx-auto">
+          Gana el menor <strong className="text-slate-100">tiempo final</strong>: lo que tardó en ordenar los {total} versículos
+          {penaltySeconds > 0 ? ` más ${penaltySeconds} s por cada intento equivocado` : ''}.
         </p>
+        {overtaken && first && (
+          <p className="mt-3 inline-flex items-start gap-2 text-left text-sm text-amber-200 bg-amber-400/10 border border-amber-400/30 rounded-xl px-3 py-2 max-w-xl">
+            <Info className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              {overtaken.name} terminó primero ({formatMs(overtaken.verseTimeMs)}), pero sus errores sumaron {overtaken.versePenaltyMs / 1000} s
+              y su tiempo final quedó en {formatMs(verseTotalMs(overtaken))}.
+            </span>
+          </p>
+        )}
       </div>
 
       {/* Podio */}
@@ -99,39 +116,35 @@ export const VersesResults: React.FC<VersesResultsProps> = ({ room, myPlayerId, 
           {ranked.map((player, index) => {
             const isMe = player.id === myPlayerId;
             return (
-              <div
-                key={player.id}
-                className={`py-3 px-2 flex items-center justify-between gap-3 ${isMe ? 'bg-teams-500/20 rounded-xl' : ''}`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
+              <div key={player.id} className={`py-3 px-2 ${isMe ? 'bg-teams-500/20 rounded-xl' : ''}`}>
+                <div className="flex items-center gap-2 sm:gap-3">
                   {index < 3 ? (
                     <span className="emoji text-xl w-7 text-center shrink-0">{MEDALS[index]}</span>
                   ) : (
                     <span className="font-mono text-sm w-7 text-center text-slate-400 shrink-0">{index + 1}</span>
                   )}
-                  <span className="emoji text-2xl shrink-0">{player.avatar}</span>
-                  <div className="min-w-0">
-                    <span className="text-base font-semibold text-slate-100 truncate block">
-                      {player.name} {isMe && '(Tú)'}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {player.versesDone}/{total} versículos
-                      {player.verseMistakes > 0 &&
-                        ` · ${player.verseMistakes} ${player.verseMistakes === 1 ? 'error' : 'errores'} (+${(player.verseMistakes * VERSE_PENALTY_MS) / 1000} s)`}
-                    </span>
-                  </div>
+                  <span className="emoji text-xl sm:text-2xl shrink-0">{player.avatar}</span>
+                  <span className="flex-1 min-w-0 text-base font-semibold text-slate-100 truncate">
+                    {player.name} {isMe && '(Tú)'}
+                  </span>
+                  <span className={`font-mono font-bold tabular-nums shrink-0 ${player.verseFinished ? 'text-amber-300 text-base sm:text-lg' : 'text-slate-400 text-sm'}`}>
+                    {player.verseFinished ? formatMs(verseTotalMs(player)) : 'Sin terminar'}
+                  </span>
                 </div>
-                <span className={`font-mono font-bold tabular-nums shrink-0 ${player.verseFinished ? 'text-amber-300 text-lg' : 'text-slate-400 text-sm'}`}>
-                  {player.verseFinished ? formatMs(verseTotalMs(player)) : 'Sin terminar'}
-                </span>
+                <VerseDetail player={player} total={total} />
               </div>
             );
           })}
         </div>
+        {anyPenalty && (
+          <p className="text-xs text-slate-400 mt-3 px-2">
+            El tiempo de la derecha es el final. Debajo: en qué orden terminó, el tiempo real y el castigo por errores.
+          </p>
+        )}
       </div>
 
       {/* Los versículos completos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {room.verses.map(verse => (
           <div key={verse.reference + verse.text} className="p-4 rounded-2xl border border-amber-400/40 bg-slate-900/60">
             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-300 mb-2">
@@ -146,13 +159,20 @@ export const VersesResults: React.FC<VersesResultsProps> = ({ room, myPlayerId, 
       {/* Controles del anfitrión */}
       {isHost ? (
         <div className="text-center">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
             <button
               onClick={onStartExtra}
               className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-amber-300 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-slate-950 font-bold rounded-2xl transition-all shadow-lg shadow-amber-500/25 active:scale-95"
             >
               <Puzzle className="w-5 h-5" />
               <span>Seguir jugando: rompecabezas y personaje</span>
+            </button>
+            <button
+              onClick={onOpenTimeSettings}
+              className="inline-flex items-center gap-2 px-5 py-3.5 rounded-2xl border border-slate-700 text-slate-200 hover:bg-slate-800 font-semibold transition-colors"
+            >
+              <Timer className="w-5 h-5" />
+              <span>Tiempos</span>
             </button>
             <button
               onClick={onResetGame}
@@ -176,4 +196,20 @@ export const VersesResults: React.FC<VersesResultsProps> = ({ room, myPlayerId, 
       )}
     </div>
   );
+};
+
+/** Línea de detalle bajo cada jugador: orden de llegada, tiempo real y castigo */
+const VerseDetail: React.FC<{ player: Player; total: number }> = ({ player, total }) => {
+  const parts: string[] = [];
+  if (player.verseFinished) {
+    parts.push(`Terminó ${player.verseFinishOrder ?? '?'}.º`);
+    parts.push(`${formatMs(player.verseTimeMs)} reales`);
+  } else {
+    parts.push(`${player.versesDone}/${total} versículos`);
+  }
+  if (player.verseMistakes > 0) {
+    const errors = `${player.verseMistakes} ${player.verseMistakes === 1 ? 'error' : 'errores'}`;
+    parts.push(player.versePenaltyMs > 0 ? `${errors} (+${player.versePenaltyMs / 1000} s)` : errors);
+  }
+  return <p className="text-xs text-slate-400 mt-1 pl-9 sm:pl-10">{parts.join(' · ')}</p>;
 };

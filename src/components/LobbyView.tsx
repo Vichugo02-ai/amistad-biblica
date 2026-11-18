@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RoomState, Player, BiblicalStory } from '../types/game';
 import { AVATAR_OPTIONS } from '../data/theme';
+import { formatClock } from '../utils/settings';
 import {
   Users,
   Check,
@@ -15,7 +16,8 @@ import {
   Puzzle,
   Mountain,
   LogIn,
-  AlertTriangle
+  AlertTriangle,
+  Timer
 } from 'lucide-react';
 
 interface LobbyViewProps {
@@ -28,6 +30,7 @@ interface LobbyViewProps {
   onStartGame: () => void;
   onOpenStoryModal: () => void;
   onOpenVerseEditor: () => void;
+  onOpenTimeSettings: () => void;
 }
 
 const HOW_TO_STEPS = [
@@ -35,7 +38,7 @@ const HOW_TO_STEPS = [
     Icon: BookOpen,
     emoji: '📜',
     title: '1. Ordena los versículos',
-    text: 'Juego principal: cada quien arma tres versículos tocando sus frases en orden. El menor tiempo gana y define la tabla oficial.'
+    text: 'Juego principal: cada quien arma cuatro versículos tocando sus frases en orden. El menor tiempo gana y define la tabla oficial.'
   },
   {
     Icon: Puzzle,
@@ -77,7 +80,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onJoinRoom,
   onStartGame,
   onOpenStoryModal,
-  onOpenVerseEditor
+  onOpenVerseEditor,
+  onOpenTimeSettings
 }) => {
   const [tab, setTab] = useState<'join' | 'create'>('join');
   const [name, setName] = useState('');
@@ -147,7 +151,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             Conexión Amistad Bíblica
           </h1>
           <p className="max-w-2xl mx-auto text-base text-slate-300">
-            Compite con hasta 20 hermanos: ordena tres versículos en el menor tiempo y, si quieren seguir, armen el rompecabezas y adivinen el personaje bíblico sin caer al abismo.
+            Compite con hasta 20 hermanos: ordena cuatro versículos en el menor tiempo y, si quieren seguir, armen el rompecabezas y adivinen el personaje bíblico sin caer al abismo.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 mt-5 text-sm font-medium text-slate-200">
             <span className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800"><span className="emoji mr-1.5">📜</span>Ordena los versículos</span>
@@ -204,7 +208,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             ) : (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  Cantidad de rondas
+                  Rondas extra (rompecabezas + personaje)
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {[3, 5].map((num) => (
@@ -342,7 +346,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       {/* Top Banner with Code */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-teams-500/40 rounded-3xl p-6 md:p-8 mb-8 text-center relative overflow-hidden shadow-2xl shadow-slate-950/50">
+      <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-teams-500/40 rounded-3xl p-4 sm:p-6 md:p-8 mb-8 text-center relative overflow-hidden shadow-2xl shadow-slate-950/50">
         <div className="relative z-10 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teams-500/20 border border-teams-500/50 text-slate-100 text-sm font-semibold mb-4">
             <Users className="w-4 h-4 text-teams-300" />
@@ -357,12 +361,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </p>
 
           {/* Large Code Display */}
-          <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-4 bg-slate-950 border-2 border-amber-400/50 rounded-3xl p-5 mb-6 animate-soft-glow">
-            <div className="text-center px-4">
+          <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-full bg-slate-950 border-2 border-amber-400/50 rounded-3xl p-4 sm:p-5 mb-6 animate-soft-glow">
+            <div className="text-center px-1 sm:px-4 max-w-full">
               <span className="text-xs uppercase tracking-wider text-slate-400 block mb-1">
                 Código de sala
               </span>
-              <span className="text-5xl md:text-6xl font-mono font-black tracking-[0.2em] text-amber-300">
+              <span className="text-4xl sm:text-5xl md:text-6xl font-mono font-black tracking-[0.12em] sm:tracking-[0.2em] text-amber-300 break-all">
                 {room.code}
               </span>
             </div>
@@ -392,8 +396,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </div>
 
           {/* Imagen de la ronda 1 (sin título: la sala de espera se comparte en pantalla) */}
-          <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 mb-6 max-w-lg mx-auto flex items-center justify-between gap-4 text-left">
-            <div className="flex items-center gap-3 overflow-hidden">
+          <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 mb-6 max-w-lg mx-auto flex flex-wrap items-center justify-between gap-3 text-left">
+            <div className="flex items-center gap-3 min-w-0 flex-1 basis-52">
               <StoryThumb story={currentStory} className="w-20 h-14 rounded-lg" />
               <div className="overflow-hidden">
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-amber-300 block">
@@ -431,16 +435,32 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 <Play className="w-5 h-5 fill-current" />
                 <span>Iniciar: ordenar versículos</span>
               </button>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                 <button
                   type="button"
                   onClick={onOpenVerseEditor}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 hover:border-amber-400 bg-slate-900 text-amber-300 hover:text-amber-200 text-xs font-semibold transition-colors"
                 >
                   <BookOpen className="w-4 h-4" />
-                  <span>Ver o cambiar los 3 versículos</span>
+                  <span>Ver o cambiar los {room.verses.length} versículos</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenTimeSettings}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 hover:border-amber-400 bg-slate-900 text-amber-300 hover:text-amber-200 text-xs font-semibold transition-colors"
+                >
+                  <Timer className="w-4 h-4" />
+                  <span>Configurar tiempos</span>
                 </button>
               </div>
+              <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-300 mt-3">
+                <span>📜 Versículos {formatClock(room.settings.versesSeconds)}</span>
+                <span>
+                  ⚠️ {room.settings.versePenaltySeconds > 0 ? `+${room.settings.versePenaltySeconds} s por error` : 'Sin castigo por error'}
+                </span>
+                <span>🧩 Rompecabezas {formatClock(room.settings.puzzleSeconds)}</span>
+                <span>🌉 Personaje {formatClock(room.settings.abyssSeconds)}</span>
+              </p>
               <p className="text-xs text-slate-400 mt-3">
                 Al hacer clic comienza para todos el juego principal. El rompecabezas y el personaje quedan como rondas extra.
               </p>

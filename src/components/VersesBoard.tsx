@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RoomState } from '../types/game';
 import { audioFx } from '../utils/audio';
-import { VERSES_TIME_LIMIT, VERSE_PENALTY_MS, formatMs, rankVersePlayers, verseTotalMs } from '../utils/verses';
+import { formatMs, rankVersePlayers, verseTotalMs } from '../utils/verses';
+import { DEFAULT_SETTINGS } from '../utils/settings';
 import { BookOpen, Check, CheckCircle2, Eraser, Loader2, MousePointerClick, Timer, Users, X } from 'lucide-react';
 
 interface VersesBoardProps {
@@ -34,6 +35,8 @@ export const VersesBoard: React.FC<VersesBoardProps> = ({ room, myPlayerId, onSu
   const finished = me?.verseFinished ?? false;
   const verse = room.verses[verseIndex];
   const total = room.verses.length;
+  const settings = room.settings ?? DEFAULT_SETTINGS;
+  const penaltySeconds = settings.versePenaltySeconds;
 
   // Frases disponibles (por índice) y respuesta que va armando el jugador
   const [pool, setPool] = useState<number[]>([]);
@@ -107,11 +110,12 @@ export const VersesBoard: React.FC<VersesBoardProps> = ({ room, myPlayerId, onSu
               Arma cada versículo en el menor tiempo
             </h2>
             <p className="hidden sm:block text-sm text-slate-400 mt-0.5">
-              Toca las frases en el orden correcto. Cada intento equivocado suma {VERSE_PENALTY_MS / 1000} segundos.
+              Toca las frases en el orden correcto.{' '}
+              {penaltySeconds > 0 ? `Cada intento equivocado suma ${penaltySeconds} segundos.` : 'Los intentos equivocados no suman tiempo.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <div
               className={`flex items-center gap-2.5 px-4 py-2 rounded-xl bg-slate-950 border-2 ${
                 isTimeLow ? 'border-rose-500 animate-pulse' : 'border-amber-400/40'
@@ -148,9 +152,11 @@ export const VersesBoard: React.FC<VersesBoardProps> = ({ room, myPlayerId, onSu
               <h3 className="text-2xl font-bold text-emerald-200 font-cinzel">¡Ordenaste los {total} versículos!</h3>
               {me && (
                 <p className="text-base text-slate-200 mt-2">
-                  Tu tiempo: <strong className="text-amber-300 font-mono text-xl">{formatMs(verseTotalMs(me))}</strong>
-                  {me.verseMistakes > 0 && (
-                    <span className="text-sm text-slate-400"> (incluye {me.verseMistakes * (VERSE_PENALTY_MS / 1000)} s de penalización)</span>
+                  Tu tiempo final: <strong className="text-amber-300 font-mono text-xl">{formatMs(verseTotalMs(me))}</strong>
+                  {me.versePenaltyMs > 0 && (
+                    <span className="block text-sm text-slate-400 mt-1">
+                      {formatMs(me.verseTimeMs)} reales + {me.versePenaltyMs / 1000} s por {me.verseMistakes} {me.verseMistakes === 1 ? 'error' : 'errores'}
+                    </span>
                   )}
                 </p>
               )}
@@ -212,7 +218,7 @@ export const VersesBoard: React.FC<VersesBoardProps> = ({ room, myPlayerId, onSu
               {wrong && (
                 <p className="flex items-center gap-2 text-sm text-rose-300 font-medium mt-2">
                   <X className="w-4 h-4 shrink-0" />
-                  Hay frases fuera de lugar (+{VERSE_PENALTY_MS / 1000} s). En verde, las que sí van ahí.
+                  Hay frases fuera de lugar{penaltySeconds > 0 ? ` (+${penaltySeconds} s)` : ''}. En verde, las que sí van ahí.
                 </p>
               )}
 
@@ -280,6 +286,14 @@ export const VersesBoard: React.FC<VersesBoardProps> = ({ room, myPlayerId, onSu
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {player.versePenaltyMs > 0 && (
+                      <span
+                        className="text-[11px] font-mono font-semibold text-rose-300 tabular-nums"
+                        title={`${player.verseMistakes} ${player.verseMistakes === 1 ? 'error' : 'errores'}`}
+                      >
+                        +{player.versePenaltyMs / 1000}s
+                      </span>
+                    )}
                     {player.verseFinished ? (
                       <span className="flex items-center gap-1 text-sm font-mono font-bold text-emerald-400 tabular-nums">
                         <CheckCircle2 className="w-4 h-4" />
@@ -302,7 +316,7 @@ export const VersesBoard: React.FC<VersesBoardProps> = ({ room, myPlayerId, onSu
           </div>
 
           <p className="text-xs text-slate-400 mt-3">
-            Tiempo máximo: {formatClock(VERSES_TIME_LIMIT)}. Gana quien ordene los {total} versículos más rápido.
+            Tiempo máximo: {formatClock(settings.versesSeconds)}. Gana el menor tiempo final: lo que tardó{penaltySeconds > 0 ? ' más el castigo por errores' : ''}.
           </p>
         </div>
       </div>

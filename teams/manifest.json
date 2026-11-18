@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.3",
+  "id": "3b02df5c-2e15-43ac-8186-ff560f215027",
+  "packageName": "com.amistadbiblica.teams",
+  "developer": {
+    "name": "Conexion Amistad Biblica",
+    "websiteUrl": "https://amistad-biblica.onrender.com",
+    "privacyUrl": "https://amistad-biblica.onrender.com",
+    "termsOfUseUrl": "https://amistad-biblica.onrender.com"
+  },
+  "name": {
+    "short": "Amistad Bíblica",
+    "full": "Conexión Amistad Bíblica - Desafío Teams"
+  },
+  "description": {
+    "short": "Ordena versículos, arma el rompecabezas y adivina el personaje en la reunión.",
+    "full": "Juego en vivo para el Día del Amigo. Juego principal: cada participante ordena las frases de cuatro versículos en el menor tiempo y se arma la tabla oficial. Rondas extra: rompecabezas bíblico de 24 piezas y adivinar el personaje sin que el pastor caiga del puente."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#181B40",
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://amistad-biblica.onrender.com/?teams=config",
+      "canUpdateConfiguration": true,
+      "scopes": [
+        "groupchat",
+        "team"
+      ],
+      "context": [
+        "meetingSidePanel",
+        "meetingStage",
+        "meetingChatTab",
+        "meetingDetailsTab",
+        "privateChatTab",
+        "channelTab"
+      ]
+    }
+  ],
+  "permissions": [
+    "identity"
+  ],
+  "validDomains": [
+    "amistad-biblica.onrender.com"
+  ],
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        {
+          "name": "MeetingStage.Write.Chat",
+          "type": "Delegated"
+        }
+      ]
+    }
+  }
+}

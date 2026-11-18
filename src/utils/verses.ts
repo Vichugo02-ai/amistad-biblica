@@ -1,11 +1,7 @@
 import { Player, VerseChallenge } from '../types/game';
 
-/** Tiempo máximo del juego de versículos, en segundos */
-export const VERSES_TIME_LIMIT = 300;
-/** Penalización por cada intento equivocado, en milisegundos */
-export const VERSE_PENALTY_MS = 5000;
 /** Cantidad de versículos del juego */
-export const VERSES_COUNT = 3;
+export const VERSES_COUNT = 4;
 
 export interface VerseInput {
   reference: string;
@@ -26,6 +22,10 @@ export const DEFAULT_VERSES: VerseInput[] = [
   {
     reference: 'Eclesiastés 4:9',
     text: 'Mejores son dos / que uno; / porque tienen / mejor paga / de su trabajo.'
+  },
+  {
+    reference: 'Proverbios 27:17',
+    text: 'Hierro con hierro / se aguza; / y el hombre / aguza el rostro / de su amigo.'
   }
 ];
 
@@ -84,12 +84,16 @@ export function buildVerseChallenge(input: VerseInput): VerseChallenge {
   };
 }
 
-/** Tiempo total de un jugador: lo que tardó más la penalización por errores */
+/**
+ * Tiempo final de un jugador: lo que tardó de verdad más la penalización por errores.
+ * La penalización se guarda en cada error, así que cambiar el ajuste después no altera
+ * a quien ya jugó.
+ */
 export function verseTotalMs(player: Player): number {
-  return player.verseTimeMs + player.verseMistakes * VERSE_PENALTY_MS;
+  return player.verseTimeMs + (player.versePenaltyMs ?? 0);
 }
 
-/** Orden de la tabla: primero quien terminó en menos tiempo; luego quien ordenó más versículos */
+/** Orden de la tabla: primero quien terminó, por menor tiempo final; luego quien ordenó más versículos */
 export function rankVersePlayers(players: Player[]): Player[] {
   return [...players].sort((a, b) => {
     if (a.verseFinished !== b.verseFinished) return a.verseFinished ? -1 : 1;

@@ -45,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="flex items-center justify-between gap-4 md:gap-8 px-4 md:px-6 py-3 border-b border-teams-500/30 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40">
+    <header className="flex items-center justify-between gap-2 md:gap-8 px-3 md:px-6 py-2.5 md:py-3 border-b border-teams-500/30 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40">
       {/* Zona 1: logo y nombre */}
       <a
         href="/"
@@ -53,13 +53,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           // Dentro de una sala el logo no navega: evita salirse por accidente
           if (roomCode) e.preventDefault();
         }}
-        className="flex items-center gap-2.5 whitespace-nowrap shrink-0 group"
+        className="flex items-center gap-2 md:gap-2.5 min-w-0 group"
       >
-        <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/25">
+        <span className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/25">
           <HeartHandshake className="w-5 h-5" strokeWidth={2.25} />
         </span>
-        <span className="text-base md:text-lg font-bold tracking-tight text-amber-300 font-cinzel group-hover:text-amber-200 transition-colors">
-          Conexión Amistad Bíblica
+        {/* En celular el nombre se acorta para que los botones quepan */}
+        <span className="text-base md:text-lg font-bold tracking-tight text-amber-300 font-cinzel group-hover:text-amber-200 transition-colors truncate">
+          <span className="sm:hidden">Amistad Bíblica</span>
+          <span className="hidden sm:inline">Conexión Amistad Bíblica</span>
         </span>
       </a>
 
@@ -104,11 +106,11 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Zona 3: sonido y tema */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-0.5 md:gap-1.5 shrink-0">
         <button
           onClick={toggleSound}
           title={muted ? 'Activar sonido' : 'Silenciar sonido'}
-          className={`p-2.5 rounded-xl transition-colors ${
+          className={`p-2 md:p-2.5 rounded-xl transition-colors ${
             muted
               ? 'text-rose-300 bg-rose-500/15 hover:bg-rose-500/25'
               : 'text-slate-300 hover:text-amber-300 hover:bg-slate-800'
@@ -120,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           onClick={() => setDarkMode(!darkMode)}
           title={darkMode ? 'Modo claro' : 'Modo oscuro'}
-          className="p-2.5 text-slate-300 hover:text-amber-300 transition-colors rounded-xl hover:bg-slate-800"
+          className="p-2 md:p-2.5 text-slate-300 hover:text-amber-300 transition-colors rounded-xl hover:bg-slate-800"
           aria-label="Alternar tema"
         >
           {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -129,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onLeaveRoom}
             title="Salir de la sala"
-            className="p-2.5 text-slate-300 hover:text-rose-300 transition-colors rounded-xl hover:bg-rose-500/15"
+            className="p-2 md:p-2.5 text-slate-300 hover:text-rose-300 transition-colors rounded-xl hover:bg-rose-500/15"
             aria-label="Salir de la sala"
           >
             <LogOut className="w-5 h-5" />

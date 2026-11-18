@@ -30,6 +30,14 @@ export interface VerseChallenge {
   phrases: string[];
 }
 
+/** Tiempos que el anfitrión puede configurar (en segundos) */
+export interface GameSettings {
+  versesSeconds: number; // juego principal: ordenar versículos
+  puzzleSeconds: number; // ronda extra: rompecabezas
+  abyssSeconds: number; // ronda extra: adivinar el personaje
+  versePenaltySeconds: number; // castigo por cada intento equivocado en versículos (0 = sin castigo)
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -46,8 +54,12 @@ export interface Player {
   // Juego de ordenar versículos (define la tabla oficial)
   versesDone: number; // versículos ordenados correctamente
   verseTimeMs: number; // tiempo hasta el último versículo ordenado
-  verseMistakes: number; // intentos equivocados (cada uno suma penalización)
+  verseMistakes: number; // intentos equivocados
+  versePenaltyMs: number; // penalización acumulada (se fija al momento de cada error)
   verseFinished: boolean;
+  verseFinishOrder?: number; // 1 = fue el primero en terminar (sin contar penalización)
+  // Rondas extra: puntos de la ronda actual
+  puzzlePoints: number;
 }
 
 export interface RoomState {
@@ -63,6 +75,8 @@ export interface RoomState {
   // Juego de ordenar versículos
   verses: VerseChallenge[];
   versesStartedAt?: number;
+  settings: GameSettings;
+  stageStartedAt?: number; // cuándo empezó la etapa con reloj actual
   // Abyss board shared state
   abyssGuessedLetters: string[];
   abyssStrikes: number; // max 6
@@ -93,6 +107,8 @@ export type ClientMessage =
   | { type: 'HOST_START_ROUND'; payload: { roomCode: string } }
   | { type: 'HOST_SET_VERSES'; payload: { roomCode: string; verses: { reference: string; text: string }[] } }
   | { type: 'HOST_START_VERSES'; payload: { roomCode: string } }
+  | { type: 'HOST_SET_SETTINGS'; payload: { roomCode: string; settings: Partial<GameSettings> } }
+  | { type: 'HOST_ADD_TIME'; payload: { roomCode: string; seconds: number } }
   | { type: 'VERSE_SUBMIT'; payload: { roomCode: string; verseIndex: number; order: string[] } }
   | { type: 'HOST_NEXT_STAGE'; payload: { roomCode: string } }
   | { type: 'HOST_RESET_GAME'; payload: { roomCode: string } }

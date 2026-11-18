@@ -1,20 +1,38 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Conexión Amistad Bíblica · Desafío Teams
 
-# Run and deploy your AI Studio app
+Juego en vivo para el Día del Amigo, pensado para unas 20 personas en una reunión de Microsoft Teams.
 
-This contains everything you need to run your app locally.
+- **Juego principal:** cada participante ordena las frases de 4 versículos. El menor tiempo final (tiempo real + castigo por errores) define la tabla oficial.
+- **Rondas extra:** rompecabezas bíblico de 24 piezas y "¿Quién es el personaje?" (sin que el pastor caiga del puente).
+- El líder puede cambiar los versículos y los tiempos desde la sala de espera.
 
-View your app in AI Studio: https://ai.studio/apps/c398d10b-d1f4-4811-91fa-784806be8da5
+## Probar en tu computador
 
-## Run Locally
+Requisito: Node.js 20 o superior.
 
-**Prerequisites:**  Node.js
+```
+npm install --legacy-peer-deps
+npm run dev
+```
 
+Abre http://localhost:3000
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Publicar en Render (gratis)
+
+Servicio web conectado a este repositorio de GitHub:
+
+| Campo | Valor |
+| --- | --- |
+| Build Command | `npm install --legacy-peer-deps && npm run build` |
+| Start Command | `npm start` |
+| Variable `HOST_KEY` (opcional) | la clave de líder para crear salas |
+
+La clave de líder se escribe solo en Render (Environment). Nunca se sube a GitHub.
+
+Si Render no publica solo después de un `git push`: **Manual Deploy → Deploy latest commit**.
+
+## App para Teams
+
+La carpeta `teams/` tiene el manifiesto y los íconos. Para subirla a Teams se comprimen esos 3 archivos (`manifest.json`, `color.png`, `outline.png`) en un .zip, sin carpeta adentro, y se carga en **Aplicaciones → Administrar sus aplicaciones → Cargar una aplicación**.
+
+Si la organización no permite apps propias, se comparte el enlace de la sala en el chat de la reunión.

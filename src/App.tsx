@@ -13,7 +13,10 @@ import { StorySelectorModal } from './components/StorySelectorModal';
 import { VersesBoard } from './components/VersesBoard';
 import { VersesResults } from './components/VersesResults';
 import { VerseEditorModal } from './components/VerseEditorModal';
-import { AlertTriangle, CheckCircle2, Info, ArrowRight, WifiOff, ImagePlus, Crown } from 'lucide-react';
+import { TimeSettingsModal } from './components/TimeSettingsModal';
+import { ADD_TIME_SECONDS, DEFAULT_SETTINGS } from './utils/settings';
+import { AlertTriangle, CheckCircle2, Info, ArrowRight, WifiOff, ImagePlus, Crown, Timer, TimerReset, MoreHorizontal } from 'lucide-react';
+import { GameSettings } from './types/game';
 
 // Sesión para volver a la misma sala.
 //  - En la pestaña (sessionStorage): sirve para recargar; cada pestaña conserva su propio jugador.
@@ -64,6 +67,9 @@ export default function App() {
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
   const [selectedStory, setSelectedStory] = useState<BiblicalStory>(BIBLICAL_STORIES[0]);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
+  const [isTimeSettingsOpen, setIsTimeSettingsOpen] = useState<boolean>(false);
+  // Menú "más opciones" de la barra del anfitrión en celular
+  const [hostMenuOpen, setHostMenuOpen] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(true);
   const [muted, setMuted] = useState<boolean>(false);
   const [toast, setToast] = useState<{ id: string; message: string; type: 'info' | 'success' | 'warning' } | null>(null);
@@ -290,6 +296,16 @@ export default function App() {
     sendMessage({ type: 'HOST_START_VERSES', payload: { roomCode: room.code } });
   };
 
+  const handleSetSettings = (settings: GameSettings) => {
+    if (!room) return;
+    sendMessage({ type: 'HOST_SET_SETTINGS', payload: { roomCode: room.code, settings } });
+  };
+
+  const handleAddTime = () => {
+    if (!room) return;
+    sendMessage({ type: 'HOST_ADD_TIME', payload: { roomCode: room.code, seconds: ADD_TIME_SECONDS } });
+  };
+
   const handleSetVerses = (verses: { reference: string; text: string }[]) => {
     if (!room) return;
     sendMessage({ type: 'HOST_SET_VERSES', payload: { roomCode: room.code, verses } });
@@ -488,6 +504,7 @@ export default function App() {
             onJoinRoom={handleJoinRoom}
             onStartGame={handleStartVerses}
             onOpenVerseEditor={() => setIsVerseEditorOpen(true)}
+            onOpenTimeSettings={() => setIsTimeSettingsOpen(true)}
             onOpenStoryModal={() => setIsStoryModalOpen(true)}
           />
         ) : room.stage === 'VERSES_STAGE' ? (
@@ -502,6 +519,7 @@ export default function App() {
             room={room}
             myPlayerId={myPlayerId}
             onStartExtra={handleStartGame}
+            onOpenTimeSettings={() => setIsTimeSettingsOpen(true)}
             onResetGame={handleResetGame}
           />
         ) : room.stage === 'PUZZLE_STAGE' ? (
@@ -538,34 +556,93 @@ export default function App() {
 
       {/* Barra de control del anfitrión durante la llamada de Teams */}
       {showHostBar && room && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 border-t border-teams-500/40 px-4 py-2.5 flex items-center justify-between gap-3 text-sm backdrop-blur">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teams-500/25 border border-teams-500/50 text-slate-100 font-semibold shrink-0">
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 border-t border-teams-500/40 px-2 sm:px-4 py-2 flex items-center justify-between gap-2 text-sm backdrop-blur">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-teams-500/25 border border-teams-500/50 text-slate-100 font-semibold shrink-0">
               <Crown className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">Anfitrión</span>
+              <span className="emoji sm:hidden">{STAGE_EMOJI[room.stage]}</span>
+              <span className="hidden md:inline">Anfitrión</span>
             </span>
             {/* El título de la historia solo aparece en el resumen: antes revelaría la respuesta */}
-            <span className="text-slate-300 truncate">
+            <span className="hidden sm:inline text-slate-300 truncate min-w-0">
               <span className="emoji mr-1">{STAGE_EMOJI[room.stage]}</span>
-              {room.stage === 'VERSES_STAGE' ? 'Juego principal' : `Ronda extra ${room.currentRound} de ${room.totalRounds}`}
-              {room.stage === 'ROUND_RECAP' && ` · ${room.story.title}`}
+              {room.stage === 'VERSES_STAGE' ? 'Juego principal' : `Ronda extra ${room.currentRound}/${room.totalRounds}`}
+              <span className="hidden lg:inline">{room.stage === 'ROUND_RECAP' && ` · ${room.story.title}`}</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {room.stage !== 'VERSES_STAGE' && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            {room.isTimerRunning && (
               <button
-                onClick={() => setIsStoryModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 hover:border-amber-400 bg-slate-800 text-slate-100 hover:text-amber-300 font-medium transition-colors"
+                onClick={handleAddTime}
+                title="Sumar 1 minuto al reloj"
+                aria-label="Sumar 1 minuto al reloj"
+                className="flex items-center gap-1 px-2 sm:px-2.5 py-2 rounded-xl border border-slate-700 hover:border-emerald-400 bg-slate-800 text-emerald-300 font-bold transition-colors"
               >
-                <ImagePlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Cambiar imagen</span>
+                <TimerReset className="w-4 h-4" />
+                <span className="sm:hidden">+1</span>
+                <span className="hidden sm:inline">+1 min</span>
               </button>
             )}
 
+            {/* Computador: los botones a la vista */}
             <button
-              onClick={handleNextStage}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-slate-950 font-bold transition-colors shadow-lg shadow-amber-500/20"
+              onClick={() => setIsTimeSettingsOpen(true)}
+              title="Configurar tiempos"
+              aria-label="Configurar tiempos"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700 hover:border-amber-400 bg-slate-800 text-slate-100 hover:text-amber-300 font-medium transition-colors"
+            >
+              <Timer className="w-4 h-4" />
+              <span className="hidden lg:inline">Tiempos</span>
+            </button>
+            {room.stage !== 'VERSES_STAGE' && (
+              <button
+                onClick={() => setIsStoryModalOpen(true)}
+                title="Cambiar imagen"
+                aria-label="Cambiar imagen"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700 hover:border-amber-400 bg-slate-800 text-slate-100 hover:text-amber-300 font-medium transition-colors"
+              >
+                <ImagePlus className="w-4 h-4" />
+                <span className="hidden lg:inline">Cambiar imagen</span>
+              </button>
+            )}
+
+            {/* Celular: esas opciones van en un menú para que todo quepa */}
+            <div className="relative sm:hidden">
+              <button
+                onClick={() => setHostMenuOpen(v => !v)}
+                title="Más opciones"
+                aria-label="Más opciones"
+                aria-expanded={hostMenuOpen}
+                className="flex items-center px-2 py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-100"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+              {hostMenuOpen && (
+                <div className="absolute bottom-full right-0 mb-2 w-52 p-1.5 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl shadow-slate-950/70 animate-fade-in">
+                  <button
+                    onClick={() => { setHostMenuOpen(false); setIsTimeSettingsOpen(true); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-slate-100 hover:bg-slate-800"
+                  >
+                    <Timer className="w-4 h-4 text-amber-400" />
+                    <span>Configurar tiempos</span>
+                  </button>
+                  {room.stage !== 'VERSES_STAGE' && (
+                    <button
+                      onClick={() => { setHostMenuOpen(false); setIsStoryModalOpen(true); }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-slate-100 hover:bg-slate-800"
+                    >
+                      <ImagePlus className="w-4 h-4 text-amber-400" />
+                      <span>Cambiar imagen</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => { setHostMenuOpen(false); handleNextStage(); }}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-slate-950 font-bold transition-colors shadow-lg shadow-amber-500/20"
             >
               <span>Avanzar</span>
               <ArrowRight className="w-4 h-4" />
@@ -581,6 +658,14 @@ export default function App() {
         onClose={() => setIsStoryModalOpen(false)}
         onSelectStory={handleSelectStory}
         onUploadCustomStory={handleUploadCustomStory}
+      />
+
+      {/* Tiempos del juego (solo el líder) */}
+      <TimeSettingsModal
+        isOpen={isTimeSettingsOpen}
+        settings={room?.settings ?? DEFAULT_SETTINGS}
+        onClose={() => setIsTimeSettingsOpen(false)}
+        onSave={handleSetSettings}
       />
 
       {/* Editor de versículos (solo el líder, en la sala de espera) */}

@@ -45,17 +45,24 @@ export function initializePuzzlePieces(): { pieces: PieceLayout[]; shuffledIds: 
   return { pieces, shuffledIds };
 }
 
+/** Puntos por cada pieza bien colocada */
+export const POINTS_PER_PIECE = 25;
+/** Bono máximo por terminar rápido (se reparte según el tiempo que sobró) */
+export const MAX_SPEED_BONUS = 400;
+
 /**
- * Calculates puzzle points based on pieces placed and elapsed time
- * Total possible: up to 1000 points (24 pieces * 25 pts = 600 pts, + up to 400 speed bonus)
+ * Puntos del rompecabezas.
+ * - 25 por cada pieza colocada (24 piezas = 600).
+ * - Solo si se completa: bono de hasta 400 según la parte del tiempo que sobró.
+ *   Ejemplo con 2:00: terminar en 0:30 da 300 de bono; en 1:30, 100.
  */
-export function calculatePuzzlePoints(piecesCorrect: number, secondsTaken: number): number {
-  const basePoints = piecesCorrect * 25; // 24 * 25 = 600
-  if (piecesCorrect < TOTAL_PIECES) {
+export function calculatePuzzlePoints(piecesCorrect: number, secondsTaken: number, timeLimitSeconds = 120): number {
+  const pieces = Math.min(TOTAL_PIECES, Math.max(0, Math.floor(piecesCorrect)));
+  const basePoints = pieces * POINTS_PER_PIECE;
+  if (pieces < TOTAL_PIECES) {
     return basePoints;
   }
-  // Completed puzzle speed bonus (under 120s gives up to 400 bonus points)
-  const maxTime = 120;
-  const timeBonus = Math.max(0, Math.floor((maxTime - secondsTaken) * 3.5));
-  return basePoints + timeBonus;
+  const limit = Math.max(1, timeLimitSeconds);
+  const remainingShare = Math.max(0, (limit - secondsTaken) / limit);
+  return basePoints + Math.round(MAX_SPEED_BONUS * remainingShare);
 }

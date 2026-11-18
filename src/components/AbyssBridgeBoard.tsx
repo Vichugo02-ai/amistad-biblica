@@ -354,8 +354,20 @@ export const AbyssBridgeBoard: React.FC<AbyssBridgeBoardProps> = ({
     </svg>
   );
 
-  /** Casillas del nombre. En celular se achican según la cantidad de letras. */
-  const wordTiles = (size: 'lg' | 'md' | 'sm') => (
+  /**
+   * En celular cada casilla mide lo que cabe en el ancho: la palabra más larga
+   * entra en una sola línea sin salirse, también con la letra del celular agrandada.
+   */
+  const longestWord = Math.max(5, ...words.map(w => w.length));
+  const fluidSide = `min(2.4rem, calc((100vw - 2.75rem) / ${longestWord} - 0.3rem))`;
+  const fluidTile: React.CSSProperties = {
+    width: fluidSide,
+    height: `calc(${fluidSide} * 1.2)`,
+    fontSize: `calc(${fluidSide} * 0.62)`
+  };
+
+  /** Casillas del nombre. */
+  const wordTiles = (size: 'lg' | 'fluid') => (
     <div className={`flex flex-wrap items-center justify-center ${size === 'lg' ? 'gap-x-6 gap-y-3' : 'gap-x-3 gap-y-1.5'}`}>
       {words.map((word, wordIdx) => (
         <div key={wordIdx} className={`flex items-center ${size === 'lg' ? 'gap-1.5 sm:gap-2' : 'gap-1'}`}>
@@ -365,12 +377,9 @@ export const AbyssBridgeBoard: React.FC<AbyssBridgeBoardProps> = ({
             return (
               <div
                 key={charIdx}
+                style={size === 'fluid' ? fluidTile : undefined}
                 className={`border-2 flex items-center justify-center font-cinzel font-bold transition-all ${
-                  size === 'lg'
-                    ? 'w-14 h-18 rounded-xl text-4xl'
-                    : size === 'md'
-                    ? 'w-9 h-11 rounded-lg text-2xl'
-                    : 'w-6 h-8 rounded-md text-base'
+                  size === 'lg' ? 'w-14 h-18 rounded-xl text-4xl' : 'rounded-lg shrink-0'
                 } ${
                   isMissed
                     ? 'border-rose-500/60 bg-rose-500/10 text-rose-300'
@@ -429,7 +438,7 @@ export const AbyssBridgeBoard: React.FC<AbyssBridgeBoardProps> = ({
       {Array.from({ length: MAX_STRIKES }).map((_, i) => (
         <span
           key={i}
-          className={`h-2.5 rounded-sm transition-colors ${isCompact ? 'w-3.5' : 'w-6'} ${
+          className={`h-2.5 rounded-sm transition-colors ${isCompact ? 'w-2.5' : 'w-6'} ${
             i < room.abyssStrikes ? 'bg-rose-500' : 'bg-amber-400/90'
           }`}
         />
@@ -477,12 +486,11 @@ export const AbyssBridgeBoard: React.FC<AbyssBridgeBoardProps> = ({
   //  en modo claro.
   // =====================================================================
   if (isCompact) {
-    const tileSize = letterCount > 9 ? 'sm' : 'md';
     return (
       <div className="scene-dark max-w-xl mx-auto">
         <div
-          className="relative h-[calc(100dvh-9.5rem)] min-h-[540px] overflow-hidden sm:rounded-3xl"
-          style={{ background: '#0d0f2b' }}
+          className="relative min-h-[480px] overflow-hidden sm:rounded-3xl"
+          style={{ background: '#0d0f2b', height: isHost ? 'calc(100dvh - 11.25rem)' : 'calc(100dvh - 8.5rem)' }}
         >
           {/* Fondo: el puente llena toda la pantalla */}
           <div className="absolute inset-0">{bridgeScene(true)}</div>
@@ -493,10 +501,11 @@ export const AbyssBridgeBoard: React.FC<AbyssBridgeBoardProps> = ({
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setShowFullImageModal(true)}
+                  aria-label="Ver la imagen"
                   className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700 text-slate-100 text-xs font-semibold"
                 >
                   <ImageIcon className="w-4 h-4 text-amber-400" />
-                  <span>Imagen</span>
+                  <span className="hidden min-[400px]:inline">Imagen</span>
                 </button>
                 <button
                   onClick={pressBuzzer}
@@ -505,7 +514,7 @@ export const AbyssBridgeBoard: React.FC<AbyssBridgeBoardProps> = ({
                   className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-teams-500 text-white text-xs font-bold active:scale-95"
                 >
                   <Bell className="w-4 h-4 fill-current" />
-                  <span>Hablar</span>
+                  <span className="hidden min-[400px]:inline">Hablar</span>
                 </button>
               </div>
 
@@ -524,7 +533,7 @@ export const AbyssBridgeBoard: React.FC<AbyssBridgeBoardProps> = ({
               <span className="text-[11px] uppercase tracking-wider font-semibold text-amber-300 block text-center mb-1.5">
                 ¿Quién es el personaje? · {letterCount} letras
               </span>
-              {wordTiles(tileSize)}
+              {wordTiles('fluid')}
               {hints.length > 0 && canPlay && (
                 <button
                   onClick={nextHint}
